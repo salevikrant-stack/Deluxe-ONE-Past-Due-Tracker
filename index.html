@@ -91,6 +91,7 @@
     .custom-option:hover { background: rgba(255,255,255,0.05); }
     .custom-option.selected { background: rgba(37,99,235,0.15); color: #fff; font-weight: 500; }
     
+    /* Workspace List Item Styling */
     .workspace-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s; margin-bottom: 4px; border: 1px solid transparent; }
     .workspace-item:hover { background: rgba(255,255,255,0.05); }
     .workspace-item.active { background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); }
@@ -134,10 +135,6 @@
         <div id="admin-tab-workspaces" class="admin-pane flex-1 flex flex-col min-h-0">
             <div class="flex justify-between items-center mb-4 bg-black/20 p-3 rounded-lg border border-white/5">
                 <p class="text-sm text-gray-400">Create and manage teams, their thresholds, and default columns.</p>
-                <div class="flex gap-3">
-                    <button onclick="exportWorkspaces()" class="btn-action text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 text-xs"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Export JSON</button>
-                    <label class="btn-action text-blue-400 border-blue-500/30 hover:bg-blue-500/10 text-xs cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg> Import JSON<input type="file" id="importJsonInput" accept=".json" class="hidden" onchange="importWorkspaces(event)"></label>
-                </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 flex-1 min-h-0">
@@ -321,7 +318,6 @@
   </div>
   
   <script>
-    // --- PWA SERVICE WORKER REGISTRATION ---
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed: ', err)); }); }
 
     const DateTime = luxon.DateTime;
@@ -351,7 +347,6 @@
     document.addEventListener('click', function(event) { if (!event.target.closest('.custom-select-wrapper')) { document.querySelectorAll('.custom-select-options:not(.hidden)').forEach(el => el.classList.add('hidden')); } });
     window.syncTeamSelectors = function(val) { document.getElementById('preFlightTeamSelector').value = val; document.getElementById('postFlightTeamSelector').value = val; activeTeamId = val; }
     
-    // --- SETTINGS & ADMIN ---
     function loadSettings() {
         const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (stored) { try { const parsed = JSON.parse(stored); appSettings = { ...appSettings, ...parsed }; } catch(e) {} }
@@ -384,11 +379,9 @@
     function attemptLogin() { 
         const input = document.getElementById('adminPasswordInput').value; 
         if (input === ADMIN_PASSWORD) { 
-            // Save Audit Log
             appSettings.auditLogs.unshift({ time: DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss'), event: 'Admin Access Granted' });
-            if(appSettings.auditLogs.length > 50) appSettings.auditLogs.pop(); // Keep last 50
+            if(appSettings.auditLogs.length > 50) appSettings.auditLogs.pop();
             saveSettings();
-            
             closeLoginModal(); enterAdminMode(); 
         } else { 
             appSettings.auditLogs.unshift({ time: DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss'), event: 'Failed Admin Login Attempt' });
@@ -421,10 +414,7 @@
     function editWorkspace(key) { currentEditWsId = key; const config = appSettings.teamsConfig[key]; if(!config) return; document.getElementById('emptyWorkspaceMsg').classList.add('hidden'); document.getElementById('workspaceForm').classList.remove('hidden'); document.getElementById('ws_id').value = key; document.getElementById('ws_name').value = config.label; document.getElementById('ws_cols').value = (config.defaultCols || []).join(', '); document.getElementById('ws_l_past').value = config.labels['past_due']; document.getElementById('ws_c_past').value = config.colors['past_due']; document.getElementById('ws_t1').value = config.thresholds[1]; document.getElementById('ws_l_1').value = config.labels['b1']; document.getElementById('ws_c_1').value = config.colors['b1']; document.getElementById('ws_t2').value = config.thresholds[2]; document.getElementById('ws_l_2').value = config.labels['b2']; document.getElementById('ws_c_2').value = config.colors['b2']; document.getElementById('ws_t3').value = config.thresholds[3]; document.getElementById('ws_l_3').value = config.labels['b3']; document.getElementById('ws_c_3').value = config.colors['b3']; document.getElementById('ws_l_4').value = config.labels['b4']; document.getElementById('ws_c_4').value = config.colors['b4']; renderWorkspaceAdminList(); }
     function saveWorkspaceForm() { const idRaw = document.getElementById('ws_id').value; const name = document.getElementById('ws_name').value.trim(); const safeId = name.toLowerCase().replace(/[^a-z0-9]/g, '_'); const colsStr = document.getElementById('ws_cols').value; const colsArr = colsStr.split(',').map(s => s.trim().toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean); const newConfig = { label: name, cats: ['total', 'past_due', 'b1', 'b2', 'b3', 'b4'], labels: { 'total': 'TOTAL', 'past_due': document.getElementById('ws_l_past').value || 'Past Due', 'b1': document.getElementById('ws_l_1').value, 'b2': document.getElementById('ws_l_2').value, 'b3': document.getElementById('ws_l_3').value, 'b4': document.getElementById('ws_l_4').value, }, colors: { 'total': '#6b7280', 'past_due': document.getElementById('ws_c_past').value, 'b1': document.getElementById('ws_c_1').value, 'b2': document.getElementById('ws_c_2').value, 'b3': document.getElementById('ws_c_3').value, 'b4': document.getElementById('ws_c_4').value, }, thresholds: [ 0, parseFloat(document.getElementById('ws_t1').value) || 3, parseFloat(document.getElementById('ws_t2').value) || 6, parseFloat(document.getElementById('ws_t3').value) || 9 ], defaultCols: colsArr }; if (idRaw.startsWith('new_')) { appSettings.teamsConfig[safeId] = newConfig; currentEditWsId = safeId; } else { if (safeId !== idRaw) { delete appSettings.teamsConfig[idRaw]; appSettings.teamsConfig[safeId] = newConfig; currentEditWsId = safeId; } else { appSettings.teamsConfig[idRaw] = newConfig; } } saveSettings(); renderWorkspaceDropdowns(); renderWorkspaceAdminList(); showToast('Workspace Saved!'); }
     function deleteCurrentWorkspace() { if(!currentEditWsId) return; if(Object.keys(appSettings.teamsConfig).length <= 1) { alert("You cannot delete the last remaining workspace."); return; } if(confirm("Are you sure you want to delete this workspace?")) { delete appSettings.teamsConfig[currentEditWsId]; currentEditWsId = null; document.getElementById('workspaceForm').classList.add('hidden'); document.getElementById('emptyWorkspaceMsg').classList.remove('hidden'); saveSettings(); renderWorkspaceDropdowns(); renderWorkspaceAdminList(); let availableTeams = Object.keys(appSettings.teamsConfig); if(activeTeamId === currentEditWsId) { activeTeamId = availableTeams[0]; syncTeamSelectors(activeTeamId); } showToast("Workspace Deleted"); } }
-    function exportWorkspaces() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appSettings.teamsConfig, null, 2)); const downloadNode = document.createElement('a'); downloadNode.setAttribute("href", dataStr); downloadNode.setAttribute("download", `ddm_workspaces_${DateTime.now().toFormat('yyyyMMdd')}.json`); document.body.appendChild(downloadNode); downloadNode.click(); downloadNode.remove(); showToast("Workspaces Exported!"); }
-    function importWorkspaces(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const importedData = JSON.parse(e.target.result); if (typeof importedData === 'object' && Object.keys(importedData).length > 0) { appSettings.teamsConfig = { ...appSettings.teamsConfig, ...importedData }; saveSettings(); renderWorkspaceDropdowns(); renderWorkspaceAdminList(); showToast("Workspaces Imported Successfully!"); } else throw new Error("Invalid structure"); } catch (err) { alert("Error importing file. Please ensure it is a valid JSON workspace configuration."); } event.target.value = ''; }; reader.readAsText(file); }
 
-    // --- SESSION RESTORE LOGIC ---
     function checkSession() {
         const savedData = sessionStorage.getItem('ddm_raw_data');
         const savedCols = sessionStorage.getItem('ddm_cols');
@@ -442,9 +432,8 @@
     }
 
     loadSettings();
-    checkSession(); // Run on boot
+    checkSession();
 
-    // --- HOME FUNCTIONALITY ---
     function resetToHome() { rawFileData = null; globalRawData = []; masterCategorizedData = {}; categorizedData = {}; gridState.filters = {}; gridState.customDueIn = null; COL_DEF = []; clearSession(); if (fileInput) fileInput.value = ''; clearError(); resetUploadZoneUI(); document.getElementById('resultsSection').classList.add('hidden'); document.getElementById('uploadSection').classList.remove('hidden'); document.getElementById('defaultHeaderTitle').classList.remove('hidden'); document.getElementById('headerTeamSwitcher').classList.add('hidden'); }
     uploadZone.addEventListener('click', (e) => { if(!uploadZone.classList.contains('success')) fileInput.click(); }); uploadZone.addEventListener('dragover', (e) => { if(!uploadZone.classList.contains('success')) { e.preventDefault(); uploadZone.classList.add('drag-over'); } }); uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over')); uploadZone.addEventListener('drop', (e) => { if(!uploadZone.classList.contains('success')) { e.preventDefault(); uploadZone.classList.remove('drag-over'); if(e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); } }); fileInput.addEventListener('change', (e) => { if(e.target.files.length) handleFiles(e.target.files); });
     
@@ -466,9 +455,7 @@
             try {
                 const success = initialProcessRows(rawFileData); 
                 if(success) {
-                    // Save to Session Storage
                     try { sessionStorage.setItem('ddm_raw_data', JSON.stringify(globalRawData)); sessionStorage.setItem('ddm_cols', JSON.stringify(COL_DEF)); } catch(err) { console.warn("Dataset too large for sessionStorage", err); }
-                    
                     document.getElementById('uploadSection').classList.add('hidden'); document.getElementById('defaultHeaderTitle').classList.add('hidden'); document.getElementById('headerTeamSwitcher').classList.remove('hidden');
                     changeTeamWorkspace(activeTeamId);
                 }
@@ -605,13 +592,20 @@
         let catsToRender = currentCats.filter(c => c !== currentCats[0]); if (excludeLowest) catsToRender = catsToRender.filter(c => c !== currentCats[currentCats.length-1]);
         catsToRender.forEach(cat => { html += `<tr><td style="padding: 8px 12px; border: 1px solid #e5e7eb; font-weight: 600;">${categoryLabels[cat]}</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb; font-weight: bold; color: ${categoryColors[cat]}; text-align: center;">${categorizedData[cat].length}</td></tr>`; }); html += '</table><hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">';
         const expCols = gridState.colOrder.filter(c => gridState.colVis[c]); const MAX_ROWS = 50; 
-        catsToRender.forEach(cat => { if(categorizedData[cat] && categorizedData[cat].length > 0) { html += `<h3 style="color: ${categoryColors[cat]}; margin-top: 20px; margin-bottom: 10px; font-family: Arial, sans-serif;">${categoryLabels[cat]} (${categorizedData[cat].length})</h3><table style="border-collapse: collapse; width: 100%; margin-bottom: 30px; border: 1px solid #e5e7eb; font-family: Arial, sans-serif;"><thead style="background-color: #f9fafb;"><tr>`; expCols.forEach(c => { html += `<th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left; font-size: 13px; color: #4b5563;">${COL_DEF.find(d=>d.id===c).label}</th>`; }); html += '</tr></thead><tbody>'; let dataArray = categorizedData[cat]; if (applyHardLimit && dataArray.length > MAX_ROWS) dataArray = dataArray.slice(0, MAX_ROWS); dataArray.forEach(row => { html += `<tr>`; expCols.forEach(c => { let style = `padding: 8px; border: 1px solid #e5e7eb;`; if(c === primaryStatusColId) style += ` font-weight: 600; color: ${categoryColors[cat]};`; html += `<td style="${style}">${row[c]}</td>`; }); html += `</tr>`; }); if (applyHardLimit && categorizedData[cat].length > MAX_ROWS) html += `<tr><td colspan="${expCols.length}" style="padding: 10px; text-align: center; color: #6b7280; font-style: italic; font-size: 12px; background-color: #f9fafb;">...and ${categorizedData[cat].length - MAX_ROWS} more tasks. View Dashboard to see full list.</td></tr>`; html += '</tbody></table>'; } }); return html + '</div>';
+        catsToRender.forEach(cat => {
+            if(categorizedData[cat] && categorizedData[cat].length > 0) {
+                html += `<h3 style="color: ${categoryColors[cat]}; margin-top: 20px; margin-bottom: 10px; font-family: Arial, sans-serif;">${categoryLabels[cat]} (${categorizedData[cat].length})</h3><table style="border-collapse: collapse; width: 100%; margin-bottom: 30px; border: 1px solid #e5e7eb; font-family: Arial, sans-serif;"><thead style="background-color: #f9fafb;"><tr>`;
+                expCols.forEach(c => { html += `<th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left; font-size: 13px; color: #4b5563;">${COL_DEF.find(d=>d.id===c).label}</th>`; });
+                html += '</tr></thead><tbody>'; let dataArray = categorizedData[cat]; if (applyHardLimit && dataArray.length > MAX_ROWS) dataArray = dataArray.slice(0, MAX_ROWS); dataArray.forEach(row => { html += `<tr>`; expCols.forEach(c => { let style = `padding: 8px; border: 1px solid #e5e7eb;`; if(c === primaryStatusColId) style += ` font-weight: 600; color: ${categoryColors[cat]};`; html += `<td style="${style}">${row[c]}</td>`; }); html += `</tr>`; });
+                if (applyHardLimit && categorizedData[cat].length > MAX_ROWS) html += `<tr><td colspan="${expCols.length}" style="padding: 10px; text-align: center; color: #6b7280; font-style: italic; font-size: 12px; background-color: #f9fafb;">...and ${categorizedData[cat].length - MAX_ROWS} more tasks. View Dashboard to see full list.</td></tr>`;
+                html += '</tbody></table>';
+            }
+        }); return html + '</div>';
     }
 
     function generateTextReport() { let text = 'Hello Team,\n\nPlease find the report details below:\nKindly add these to your schedule and prioritize accordingly.\n\n--------------------------------------------------\nSUMMARY\n--------------------------------------------------\n'; const renderCats = currentCats.filter(c => c !== currentCats[0]); renderCats.forEach(cat => { text += `${categoryLabels[cat]}: ${categorizedData[cat].length}\n`; }); text += '--------------------------------------------------\n\n'; const expCols = gridState.colOrder.filter(c => gridState.colVis[c]); renderCats.forEach(cat => { if(categorizedData[cat] && categorizedData[cat].length > 0) { text += `${categoryLabels[cat]} (${categorizedData[cat].length})\n` + expCols.map(c => COL_DEF.find(d=>d.id===c).label).join('\t') + '\n'; categorizedData[cat].forEach(row => { text += expCols.map(c => row[c]).join('\t') + '\n'; }); text += '\n'; } }); return text; }
     function generateTabHtml(cat) { const data = categorizedData[cat]; const expCols = gridState.colOrder.filter(c => gridState.colVis[c]); let html = `<div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><h3 style="color: ${categoryColors[cat]}; margin-top: 10px; margin-bottom: 10px;">${categoryLabels[cat]} (${data.length})</h3><table style="border-collapse: collapse; width: 100%; border: 1px solid #e5e7eb;"><thead style="background-color: #f9fafb;"><tr>`; expCols.forEach(c => { html += `<th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left; font-size: 13px; color: #4b5563;">${COL_DEF.find(d=>d.id===c).label}</th>`; }); html += '</tr></thead><tbody>'; data.forEach(row => { html += `<tr>`; expCols.forEach(c => { let style = `padding: 8px; border: 1px solid #e5e7eb;`; if(c === primaryStatusColId) style += ` font-weight: 600; color: ${categoryColors[cat]};`; html += `<td style="${style}">${row[c]}</td>`; }); html += `</tr>`; }); return html + '</tbody></table></div>'; }
 
-    // --- TEAMS & EMAIL WEBHOOKS ---
     document.getElementById('sendTeamsBtn').addEventListener('click', async (e) => {
         const btn = e.currentTarget; const webhookUrl = appSettings.one_webhookUrl; const fallbackLink = appSettings.one_teamsLink;
         const executeFallback = async () => { try { await copyRichTextToClipboard(generateTextReport(), generateHtmlReport(false, false)); if(fallbackLink) window.open(fallbackLink, '_blank'); showToast('Report copied! Opening Teams...'); } catch(err) { showError("Could not copy to clipboard automatically."); if(fallbackLink) window.open(fallbackLink, '_blank'); } };
@@ -628,13 +622,8 @@
     document.getElementById('sendEmailBtn').addEventListener('click', async (e) => {
         const btn = e.currentTarget; const emailHookUrl = appSettings.email_webhookUrl;
         if (emailHookUrl && emailHookUrl.includes('http')) {
-            btn.classList.add('btn-loading'); showToast('Triggering Email Background Flow...');
-            let htmlReport = generateHtmlReport(false, false); 
-            try {
-                // Sent with a basic JSON structure. Map this in Power Automate!
-                const response = await fetch(emailHookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: htmlReport, subject: `Due Date Report - ${appSettings.teamsConfig[activeTeamId].label} - ${DateTime.now().toFormat('yyyy-MM-dd')}` }) }); 
-                if (response.ok) showToast('Email sent successfully!'); else throw new Error(response.status); 
-            } catch (err) { alert("Email Webhook failed. Is the Power Automate URL correct?"); } finally { btn.classList.remove('btn-loading'); }
+            btn.classList.add('btn-loading'); showToast('Triggering Email Background Flow...'); let htmlReport = generateHtmlReport(false, false); 
+            try { const response = await fetch(emailHookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: htmlReport, subject: `Due Date Report - ${appSettings.teamsConfig[activeTeamId].label} - ${DateTime.now().toFormat('yyyy-MM-dd')}` }) }); if (response.ok) showToast('Email sent successfully!'); else throw new Error(response.status); } catch (err) { alert("Email Webhook failed. Is the Power Automate URL correct?"); } finally { btn.classList.remove('btn-loading'); }
         } else { alert("No Email Webhook configured in Admin settings."); }
     });
 
